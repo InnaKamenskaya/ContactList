@@ -1,1 +1,1 @@
-# ContactList
+# Delete selected contacts
