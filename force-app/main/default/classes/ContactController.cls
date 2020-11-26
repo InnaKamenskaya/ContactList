@@ -122,6 +122,10 @@ public with sharing class ContactController {
             throw new AuraHandledException('findContactColleagues' + e.getMessage());
         }
     }
+
+
+
+
     
     private static Boolean isContactHasUnclosedCases(List<Case> source, Id contactId){
         Boolean result = true;
