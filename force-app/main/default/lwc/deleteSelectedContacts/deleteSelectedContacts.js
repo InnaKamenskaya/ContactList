@@ -1,4 +1,4 @@
-import { LightningElement, track, wire } from 'lwc';
+import { LightningElement, track, wire, api } from 'lwc';
 import getAllContacts from '@salesforce/apex/ContactController.getAllContacts';
 import start from '@salesforce/apex/ContactController.start';
 
@@ -7,20 +7,18 @@ import{ refreshApex } from '@salesforce/apex';
 const COLUMNS = [
     {label: 'FirstName', fieldName: 'FirstName', type: 'text'},
     {label: 'LastName', fieldName: 'LastName', type: 'text'},
-    {label: 'Account Name', fieldName: 'accountName', type: 'text'},
-    {label: 'Phone', fieldName: 'Phone', type: 'phone'},
-    {label: 'Email', fieldName: 'Email', type: 'email'}
+    {label: 'Account Name', fieldName: 'AccountId', type: 'text'},
+    {label: 'Phone', fieldName: 'Phone', type: 'text'},
+    {label: 'Email', fieldName: 'Email', type: 'text'}
 ];
 
 export default class DeleteSelectedContacts extends LightningElement {
-
     @track columns = COLUMNS;
     @track data = [];
     @track recordsCount = 0;
     selectedRecords = [];
     refreshTable;
     error;
-
 
     @wire(getAllContacts)
     contacts(result) {
@@ -33,23 +31,23 @@ export default class DeleteSelectedContacts extends LightningElement {
             this.data = undefined;
         }
     }
-
+    
     getSelectedRecords(event) {
-
         const selectedRows = event.detail.selectedRows;
         this.recordsCount = event.detail.selectedRows.length;
-        let contactIdSet = new Set();
+        let contactSet = new Set();
         for (let i = 0; i < selectedRows.length; i++) {
-            contactIdSet.add(selectedRows[i].Id);            
+            window.console.log(selectedRows[i].Id + ' ' + selectedRows[i].AccountId);
+            contactSet.add(selectedRows[i].Id + ' ' + selectedRows[i].AccountId);            
         }
-        if(contactIdSet){
-            this.selectedRecords = Array.from(contactIdSet);
+        if(contactSet){
+            this.selectedRecords = Array.from(contactSet);
         }
         window.console.log('selectedRecords ====> ' + this.selectedRecords);
     }
 
     deleteAll() {
-        start({source: this.selectedRecords})
+        start({frontSource: this.selectedRecords})
         .then(result => {
             window.console.log('result ====> ' + result.body);
             this.dispatchEvent(

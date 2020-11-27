@@ -1,37 +1,6 @@
 public with sharing class ContactController {
 
-    private static Boolean check = true;
-    private static List<String> closedStatus = new List<String>{'Closed'};
-    private static List<String> unclosedStatus = new List<String>{'New', 'Working', 'Escalated'};
-    private static List<String> allStatuses = new List<String>{'New', 'Working', 'Escalated', 'Closed'};
-
-
-    @AuraEnabled
-    public static List<Contact> start(List<Id> source){
-        if(check){
-            System.debug('Inside start method');
-            return deleteContacts(source);
-        }else{
-            return bung(source);
-        }
-    }
-
-    @AuraEnabled
-    public static List<Contact> bung(Id[] lstConIds){
-        try {
-            list<Contact> lstConsToDelete = new list<Contact>();
-            for(Id idCon : lstConIds) {
-                lstConsToDelete.add(new Contact(Id = idCon));
-            }
-            if(!lstConsToDelete.isEmpty()) {
-                delete lstConsToDelete;
-            }
-            return lstConsToDelete;
-        }
-        catch(Exception ex) {
-            throw new AuraHandledException(ex.getMessage());
-        }
-    }
+    private static Integer maxCases = 0;
 
     @AuraEnabled(cacheable = true)
     public static List<Contact> getAllContacts(){
@@ -45,130 +14,128 @@ public with sharing class ContactController {
         }
     }
 
-    @AuraEnabled
-    public static Account findAccountByContactId(Id contactId){
+    @AuraEnabled(cacheable = false)
+    public static List<Contact> start(List<String> frontSource){
         try {
-            Contact temp = [SELECT Id, AccountId FROM Contact WHERE Id = :contactId][0];
-            Id accId = temp.AccountId;
-            return new Account( Id = accId);
-        } catch (Exception e) {
-            throw new AuraHandledException('Could not find account by ContactId:' + contactId + ', reason: ' + e.getMessage());
-        }
-    }
-
-    @AuraEnabled(cacheable=false)
-    public static List<Contact> deleteContacts(List<Id> source){   
-        List<Contact> delContacts = new List<Contact>();              
-        try{
-            for(Id contactId : source){   
-                Contact delContact;                 
-                Set<Case> updatedCases = new Set<Case>();
-                Set<Case> delCases = new Set<Case>();               
-                System.debug('contactId: ' + contactId);              
-                List<Case> allAccountCases = CaseController.findAllAccountCasesByContactId(contactId);
-                List<Case> closedCases = CaseController.findCasesByContactId(allAccountCases, contactId, closedStatus);
-                System.debug('All Account Cases: ' + allAccountCases);
-                if(!isContactHasCases(allAccountCases, contactId)){ 
-                    delContact = new Contact(Id = contactId);                 
-                    delContacts.add(delContact);
-                }else if(!isContactHasUnclosedCases(allAccountCases, contactId)){
-                    delCases.addAll(closedCases);
-                    delContact = new Contact(Id = contactId);                 
-                    delContacts.add(delContact);
-                }else{          
-                    List<Case> unclosedCases = CaseController.findCasesByContactId(allAccountCases, contactId, unclosedStatus);
-                    System.debug('unclosedCases: ' + unclosedCases);
-                    Contact newCaseExecutor = findContactWithMinCases(contactId);
-                    System.debug('newCaseExecutor' + newCaseExecutor);
-                    if(newCaseExecutor == null){
-                        delCases.addAll(unclosedCases);
-                        delCases.addAll(closedCases);
-                        System.debug(delCases);
-                        delContact = new Contact(Id = contactId);                 
-                        delContacts.add(delContact);
-                    }else{                        
-                        for (Case c : unclosedCases) {
-                            c.ContactId = newCaseExecutor.Id;
-                            updatedCases.add(c);
+            List<Case> updateCases = new List<Case>();
+            List<Contact> source = getContactsFromFront(frontSource);
+            List<Id> accountsId = getAccountsId(source);
+            Map <Id, List<Contact>> accountsWithContacts = getColleagues(source, accountsId);
+            List<Id> allContactsId = getAllContactsId(source, accountsWithContacts);
+            Map<Contact, List<Case>> contactsWithCases = getAllCases(allContactsId);            
+            Map<Contact, List<Case>> delContactsWithCases = getSpecificContactsWithCases(true, contactsWithCases, source);
+            Map<Contact,List<Case>> stayContactsWithCases = getSpecificContactsWithCases(false, contactsWithCases, source);
+            for(Contact c : delContactsWithCases.keySet()){
+                if(delContactsWithCases.get(c).size() == 0){
+                    continue;
+                }else {
+                    List<Contact> colleagues = accountsWithContacts.get(c.AccountId);
+                    if (colleagues.size() == 0) {
+                        throw new AuraHandledException('ACHAHCAHA');
+                    } else {
+                        Contact newExecutor = getNewExecutor(colleagues, stayContactsWithCases);
+                        for(Case cs : delContactsWithCases.get(c)){
+                            cs.ContactId = newExecutor.Id;
+                            updateCases.add(cs);
                         }
-                        delCases.addAll(closedCases);
-                        System.debug('delCases: ' + delCases);
-                        delContact = new Contact(Id = contactId);                 
-                        delContacts.add(delContact); 
                     }
-                }  
-                if(!delCases.isEmpty()){
-                    delete new List<Case>(delCases);
-                }
-                if (!updatedCases.isEmpty()) {
-                    update new List<Case>(updatedCases);
-                } 
-                delete delContact;                      
-            }                       
-            return delContacts;
+                }                
+            } 
+            update updateCases;
+            delete source;     
+            return source;           
         } catch (Exception e) {
-            throw new AuraHandledException(' delete Contacts' + e.getMessage() + e.getStackTraceString());
-        }    
-    }
-    
-    @AuraEnabled
-    public static List<Contact> findContactColleagues(Id contactId){
-        try {
-            Account contactAccount = findAccountByContactId(contactId);
-            return [
-                SELECT Id FROM Contact WHERE AccountId = :contactAccount.Id AND Id != :contactId
-            ];          
-        } catch (Exception e) {
-            throw new AuraHandledException('findContactColleagues' + e.getMessage());
+            throw new AuraHandledException(e.getMessage() + ' ' + e.getStackTraceString());
         }
     }
 
-
-
-
-    
-    private static Boolean isContactHasUnclosedCases(List<Case> source, Id contactId){
-        Boolean result = true;
-        List<Case> unclosedCases = CaseController.findCasesByContactId(source, contactId, unclosedStatus);
-        if (unclosedCases == null) {
-            result = false;
+    private static List<Contact> getContactsFromFront(List<String> source){
+        List<Contact> result = new List<Contact>();
+        for(String str : source){
+            List<String> strList = str.split(' ');
+            Contact tmp = new Contact();
+            tmp.Id = strList.get(0);
+            tmp.AccountId = strList.get(1);
+            result.add(tmp);
         }
         return result;
-    } 
+    }
 
-    private static Boolean isContactHasCases(List<Case> source, Id contactId){
-        Boolean result = true;
-        List<Case> contactCases = CaseController.findCasesByContactId(source, contactId, allStatuses);
-        if (contactCases == null) {
-            result = false;
+    private static List<Id> getAccountsId(List<Contact> source){
+        Set<Id> result = new Set<Id>();
+        for (Contact c : source) {
+            result.add(c.AccountId);
         }
-        return result;
-    }   
+        return new List<Id>(result);
+    }
 
-    private static Contact findContactWithMinCases (Id contactId){        
-        List<Contact> source = findContactColleagues(contactId);        
-        if (source.size() == 0) {
-            return null;
-        }else {   
-            Contact result;  
-            Map<Id, Contact> contactsWithCountCases = new Map<Id, Contact>(source);
-            List<Contact> resList = [SELECT Id, (SELECT Id FROM Cases) FROM Contact WHERE Id IN :contactsWithCountCases.keySet()];
-            Map<Contact, Integer> resMap = new Map<Contact, Integer>();
-            for(Contact c : resList){
-                resMap.put(c, c.Cases.size());
-            }           
-            List<Contact> contactList = new List<Contact>(resMap.keySet());
-            List<Integer> caseQuantity = resMap.values();
-            Integer count = 2147483646;
-            Integer tmp;
-            for(Integer i = 0; i < caseQuantity.size(); i++){
-                if (caseQuantity.get(i) < count) {
-                    count = caseQuantity.get(i);
-                    tmp = i;
-                }
+    private static Map<Id, List<Contact>> getColleagues(List<Contact> source, List<Id> accountsId){
+        List<Contact> temp = [SELECT Id, AccountId FROM Contact c WHERE c.AccountId IN :accountsId AND Id NOT IN :source];
+        Map<Id, List<Contact>> result = new Map<Id, List<Contact>>();
+        for (Contact c : temp) {
+            if (result.keySet().contains(c.AccountId)) {
+                List<Contact> tmp = result.get(c.AccountId);
+                tmp.add(c);
+            }else {
+                result.put(c.AccountId, new List<Contact>{c});
             }
-            result = contactList.get(tmp);
-           return result;
         }        
+        return result;
     }
+
+    private static List<Id> getAllContactsId(List<Contact> delContacts, Map<Id, List<Contact>> accountWithContacts){
+        List<Id> result = new List<Id>();
+        List<Contact> tempContacts = new List<Contact>();
+        for(List<Contact> temp : accountWithContacts.values()){
+            tempContacts.addAll(temp);
+        }
+        tempContacts.addAll(delContacts);
+        for(Contact c : tempContacts){
+            result.add(c.Id);
+        }
+        return result;
+    }
+
+    private static Map<Contact, List<Case>> getAllCases(List<Id> allContactsId){
+        List<Contact> allContacts = [SELECT Id, AccountId, (SELECT Id, Status, ContactId FROM Cases) FROM Contact WHERE Id IN :allContactsId];
+        Map<Contact, List<Case>> result = new Map<Contact, List<Case>>();
+        for(Contact c : allContacts){
+            result.put(new Contact(Id = c.Id, AccountId = c.AccountId), c.Cases);
+            if(c.Cases.size() > maxCases){
+                maxCases = c.Cases.size();
+            }
+        }            
+        return result;
+    }
+
+    private static Map<Contact, List<Case>> getSpecificContactsWithCases(Boolean check, Map<Contact, List<Case>> source, List<Contact> delContacts){
+        Map<Contact, List<Case>> result = new Map<Contact, List<Case>>();
+        Map<Contact, List<Case>> del = new Map<Contact, List<Case>>();
+        Map<Contact, List<Case>> stay = new Map<Contact, List<Case>>();
+        for(Contact c : source.keySet()){
+            if (delContacts.contains(c)) {
+                del.put(c, source.get(c));
+            }else {
+                stay.put(c, source.get(c));
+            }            
+        }
+        if (check) {
+            result = del;
+        }else {
+            result = stay;
+        }
+        return result;
+    }
+
+
+   private static Contact getNewExecutor(List<Contact> coll, Map<Contact, List<Case>> source){
+        Integer min = maxCases;
+        Contact result = new Contact();
+        for(Contact c : coll){
+            if(source.get(c).size() < min){
+                result = c;
+            }
+        }
+        return result;
+    }    
 }
