@@ -132,7 +132,8 @@ public with sharing class ContactController {
         Integer min = maxCases;
         Contact result = new Contact();
         for(Contact c : coll){
-            if(source.get(c).size() < min){
+            if(source.get(c).size() <= min){
+                min = source.get(c).size();
                 result = c;
             }
         }
