@@ -37,7 +37,6 @@ public with sharing class ContactController {
                         for(Case cs : delContactsWithCases.get(c)){
                             cs.ContactId = newExecutor.Id;
                             updateCases.add(cs);
-                            System.debug(updateCases);
                         }
                     }
                 }                
@@ -104,10 +103,8 @@ public with sharing class ContactController {
         Map<Contact, List<Case>> result = new Map<Contact, List<Case>>();
         for(Contact c : allContacts){
             result.put(new Contact(Id = c.Id, AccountId = c.AccountId), c.Cases);
-            System.debug('c.Id + c.Cases' + c.Id + c.Cases);
             if(c.Cases.size() > maxCases){
                 maxCases = c.Cases.size();
-                System.debug(maxCases);
             }
         }            
         return result;
