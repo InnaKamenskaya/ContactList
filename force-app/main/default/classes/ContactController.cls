@@ -37,13 +37,16 @@ public with sharing class ContactController {
                         for(Case cs : delContactsWithCases.get(c)){
                             cs.ContactId = newExecutor.Id;
                             updateCases.add(cs);
+                            System.debug(updateCases);
                         }
                     }
                 }                
             } 
             update updateCases;
-            delete source;     
-            return source;           
+            delete source; 
+            maxCases = 0;    
+            return source;  
+           // throw new AuraHandledException('');         
         } catch (Exception e) {
             throw new AuraHandledException(e.getMessage() + ' ' + e.getStackTraceString());
         }
@@ -101,8 +104,10 @@ public with sharing class ContactController {
         Map<Contact, List<Case>> result = new Map<Contact, List<Case>>();
         for(Contact c : allContacts){
             result.put(new Contact(Id = c.Id, AccountId = c.AccountId), c.Cases);
+            System.debug('c.Id + c.Cases' + c.Id + c.Cases);
             if(c.Cases.size() > maxCases){
                 maxCases = c.Cases.size();
+                System.debug(maxCases);
             }
         }            
         return result;
@@ -132,7 +137,8 @@ public with sharing class ContactController {
         Integer min = maxCases;
         Contact result = new Contact();
         for(Contact c : coll){
-            if(source.get(c).size() < min){
+            if(source.get(c).size() <= min){
+                min = source.get(c).size();
                 result = c;
             }
         }
