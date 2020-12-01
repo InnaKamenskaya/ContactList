@@ -7,7 +7,7 @@ public with sharing class ContactController {
         try {
             return [SELECT Id, FirstName, LastName, a.Name, Phone, Email
             FROM Contact c, c.Account a            
-            WITH SECURITY_ENFORCED ORDER BY LastName LIMIT 20];
+            WITH SECURITY_ENFORCED ORDER BY LastName];
             
         } catch (Exception e) {
             throw new AuraHandledException('Could not get all contacts, reason: ' + e.getMessage());
@@ -15,10 +15,14 @@ public with sharing class ContactController {
     }
 
     @AuraEnabled(cacheable = false)
-    public static List<Contact> start(List<String> frontSource){
+    //public static List<Contact> start(List<Contact> frontSource){
+    public static List<Contact> start(String frontSource){
         try {
+            System.debug(JSON.serializePretty(frontSource));
+            System.debug('frontSource');
+            List<Contact> source = (List<Contact>) JSON.deserialize(frontSource, List<Contact>.class);
             List<Case> updateCases = new List<Case>();
-            List<Contact> source = getContactsFromFront(frontSource);
+            //List<Contact> source = getContactsFromFront(frontSource);
             List<Id> accountsId = getAccountsId(source);
             Map <Id, List<Contact>> accountsWithContacts = getColleagues(source, accountsId);
             List<Id> allContactsId = getAllContactsId(source, accountsWithContacts);
