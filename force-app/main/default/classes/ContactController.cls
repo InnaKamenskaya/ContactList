@@ -19,8 +19,9 @@ public with sharing class ContactController {
     public static List<Contact> start(String frontSource){
         try {
             System.debug(JSON.serializePretty(frontSource));
-            System.debug('frontSource');
+            
             List<Contact> source = (List<Contact>) JSON.deserialize(frontSource, List<Contact>.class);
+            System.debug('Source: ' + source);
             List<Case> updateCases = new List<Case>();
             //List<Contact> source = getContactsFromFront(frontSource);
             List<Id> accountsId = getAccountsId(source);

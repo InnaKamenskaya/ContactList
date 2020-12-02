@@ -8,32 +8,72 @@ import{ refreshApex } from '@salesforce/apex';
 const COLUMNS = [
     {label: 'FirstName', fieldName: 'FirstName', type: 'text'},
     {label: 'LastName', fieldName: 'LastName', type: 'text'},
-    {label: 'Account Name', fieldName: 'AccountId', type: 'text'},
-    {label: 'Phone', fieldName: 'Phone', type: 'text'},
-    {label: 'Email', fieldName: 'Email', type: 'text'}
+    {label: 'Account Name', fieldName: 'AccountName', type: 'text'},
+    {label: 'Phone', fieldName: 'Phone', type: 'phone'},
+    {label: 'Email', fieldName: 'Email', type: 'email'}
 ];
 
+
 export default class DeleteSelectedContacts extends LightningElement {
-    @track columns = COLUMNS;
+    columns = COLUMNS;
     @track data = [];
     @track recordsCount = 0;
     @track page = 1;
     @track pages = [];
-    perpage = 2;
+    contactSet = new Set();
+    @track selections = [];
+    perpage = 5;
     selectedRecords = [];
     refreshTable;
     error;
 
-    async connectedCallback(){
-        this.data = await getAllContacts();
-        this.setPages(this.data);
-        
+
+    @wire(getAllContacts)
+    contacts(result) {        
+        this.refreshTable = result;
+        if(result.data){
+            // let preparedContacts = [];
+            // result.data.forEach(contact => {
+            // let preparedContact = {};
+            // preparedContact.Id = contact.Id;
+            // preparedContact.AccountId = contact.AccountId;
+            // preparedContact.FirstName = contact.FirstName;
+            // preparedContact.LastName = contact.LastName;
+            // preparedContact.AccountName = contact.Account.Name;
+            // preparedContact.Phone = contact.Phone;
+            // preparedContact.Email = contact.Email;
+            // preparedContacts.push(preparedContact);
+        //});
+        this.data = result.data;
+        this.setPages(this.data); 
+        this.error = undefined;
+        }else if (result.error){
+            this.error = result.error;
+            this.data = undefined;
+        }
     }
+    // async connectedCallback(){
+    //     this.data = await getAllContacts(); 
+    //     let preparedContacts = [];
+    //     this.data.forEach(contact => {
+    //         let preparedContact = {};
+    //         preparedContact.Id = contact.Id;
+    //         preparedContact.AccountId = contact.AccountId;
+    //         preparedContact.FirstName = contact.FirstName;
+    //         preparedContact.LastName = contact.LastName;
+    //         preparedContact.AccountName = contact.Account.Name;
+    //         preparedContact.Phone = contact.Phone;
+    //         preparedContact.Email = contact.Email;
+    //         preparedContacts.push(preparedContact);
+    //     });
+    //     this.data = preparedContacts;
+    //     console.log(this.data);
+    //     this.setPages(this.data);        
+    // }
 
     getSelectedRecords(event) {
         let selectedRows = event.detail.selectedRows;
         this.recordsCount = event.detail.selectedRows.length;
-        let contactSet = new Set();
         for (let i = 0; i < selectedRows.length; i++) {
             let contact = {              
                 Id : selectedRows[i].Id,
@@ -42,13 +82,16 @@ export default class DeleteSelectedContacts extends LightningElement {
                     type: "Contact"
                 }                
             };
-           contactSet.add(contact);          
+           this.contactSet.add(contact);
+           this.selections[i] = contact;          
         }
-        if(contactSet){
-            this.selectedRecords = Array.from(contactSet);
+        console.log("Set: " + this.contactSet.size);
+        console.log("Selections: " + this.selections.forEach(c => console.log("Contact from array!!! Id: " + c.Id + ", AccountId: " + c.AccountId)));
+        if(this.contactSet){
+            this.selectedRecords = Array.from(this.contactSet);
         }
             
-        window.console.log('selectedRecords ====> ' + this.selectedRecords);
+        console.log('selectedRecords ====> ' + this.selectedRecords);
     }
 
     deleteAll() {       
@@ -65,7 +108,7 @@ export default class DeleteSelectedContacts extends LightningElement {
                    
             this.template.querySelector('lightning-datatable').selectedRows = [];
 
-            return refreshApex(this.refreshTable);
+           return refreshApex(this.refreshTable);
 
         })
         .catch(error => {
@@ -81,22 +124,24 @@ export default class DeleteSelectedContacts extends LightningElement {
             );
         });
     }
-
-
-    get pagesList(){
-        let mid = Math.floor(this.set_size/2) + 1 ;
-        if(this.page > mid){
-            return this.pages.slice(this.page-mid, this.page+mid-1);
-        } 
-        return this.pages.slice(0,this.set_size);
-    }
     
     pageData = ()=>{
         let page = this.page;
         let perpage = this.perpage;
         let startIndex = (page*perpage) - perpage;
         let endIndex = (page*perpage);
-        return this.data.slice(startIndex,endIndex);
+        let count = endIndex - startIndex;
+        let temp = [];
+        for(let i = 0; i < count; i++){
+            if((startIndex + i) < this.data.length - 1){
+                temp[i] = this.data[startIndex + i];
+            }else{
+                return;
+            }            
+        }
+         //Array.from(this.data.slice(startIndex,endIndex));
+        console.log("this.data: " + temp);
+        return temp;
     }
 
     setPages = (data)=>{
@@ -123,6 +168,6 @@ export default class DeleteSelectedContacts extends LightningElement {
     }
 
     get currentPageData(){
-        return this.pageData();
+        return this.data = this.pageData();
     }  
 }
