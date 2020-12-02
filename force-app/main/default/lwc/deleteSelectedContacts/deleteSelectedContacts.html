@@ -15,7 +15,8 @@
             <br/>
             <lightning-datatable  key-field="id"
                 data={currentPageData}
-                columns={columns}
+                columns={columns}                
+                selected-rows={selections}
                 onrowselection={getSelectedRecords}>
             </lightning-datatable>
             <br/>
