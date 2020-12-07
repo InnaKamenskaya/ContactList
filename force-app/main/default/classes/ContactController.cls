@@ -5,7 +5,7 @@ public with sharing class ContactController {
     @AuraEnabled(cacheable = true)
     public static List<Contact> getAllContacts(){
         try {
-            return [SELECT Id, FirstName, LastName, a.Name, Phone, Email
+            return [SELECT Id, FirstName, LastName, a.Name, Phone, Email, (SELECT Id FROM Cases)
             FROM Contact c, c.Account a            
             WITH SECURITY_ENFORCED ORDER BY LastName];
             
@@ -15,15 +15,10 @@ public with sharing class ContactController {
     }
 
     @AuraEnabled(cacheable = false)
-    //public static List<Contact> start(List<Contact> frontSource){
     public static List<Contact> start(String frontSource){
-        try {
-            System.debug(JSON.serializePretty(frontSource));
-            
+        try {          
             List<Contact> source = (List<Contact>) JSON.deserialize(frontSource, List<Contact>.class);
-            System.debug('Source: ' + source);
             List<Case> updateCases = new List<Case>();
-            //List<Contact> source = getContactsFromFront(frontSource);
             List<Id> accountsId = getAccountsId(source);
             Map <Id, List<Contact>> accountsWithContacts = getColleagues(source, accountsId);
             List<Id> allContactsId = getAllContactsId(source, accountsWithContacts);
@@ -35,8 +30,10 @@ public with sharing class ContactController {
                     continue;
                 }else {
                     List<Contact> colleagues = accountsWithContacts.get(c.AccountId);
-                    if (colleagues.size() == 0) {
-                        throw new AuraHandledException('ACHAHCAHA');
+                    if (colleagues == null) {
+                        AuraHandledException e = new AuraHandledException('');
+                        e.setMessage('first error: DELETE_FAILED, Your attempt to delete this contact could not be completed because it is associated with some cases');
+                        throw e;
                     } else {
                         Contact newExecutor = getNewExecutor(colleagues, stayContactsWithCases);
                         for(Case cs : delContactsWithCases.get(c)){
@@ -49,23 +46,10 @@ public with sharing class ContactController {
             update updateCases;
             delete source; 
             maxCases = 0;    
-            return source;  
-           // throw new AuraHandledException('');         
+            return source;    
         } catch (Exception e) {
-            throw new AuraHandledException(e.getMessage() + ' ' + e.getStackTraceString());
+            throw new AuraHandledException(e.getMessage());
         }
-    }
-
-    private static List<Contact> getContactsFromFront(List<String> source){
-        List<Contact> result = new List<Contact>();
-        for(String str : source){
-            List<String> strList = str.split(' ');
-            Contact tmp = new Contact();
-            tmp.Id = strList.get(0);
-            tmp.AccountId = strList.get(1);
-            result.add(tmp);
-        }
-        return result;
     }
 
     private static List<Id> getAccountsId(List<Contact> source){
@@ -133,7 +117,6 @@ public with sharing class ContactController {
         }
         return result;
     }
-
 
    private static Contact getNewExecutor(List<Contact> coll, Map<Contact, List<Case>> source){
         Integer min = maxCases;

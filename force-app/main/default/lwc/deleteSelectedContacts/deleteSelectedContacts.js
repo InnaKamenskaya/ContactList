@@ -1,4 +1,4 @@
-import { LightningElement, track, wire, api } from 'lwc';
+import { LightningElement, track, wire } from 'lwc';
 import getAllContacts from '@salesforce/apex/ContactController.getAllContacts';
 import start from '@salesforce/apex/ContactController.start';
 
@@ -13,103 +13,100 @@ const COLUMNS = [
     {label: 'Email', fieldName: 'Email', type: 'email'}
 ];
 
-
 export default class DeleteSelectedContacts extends LightningElement {
-    columns = COLUMNS;
-    @track data = [];
+    
+    @track dataPerPage = [];
     @track recordsCount = 0;
-    @track page = 1;
+    @track page = 0;
     @track pages = [];
-    contactSet = new Set();
-    @track selections = [];
+
+    columns = COLUMNS;
+    data = [];
+    arrayDataPerPage = [];
     perpage = 5;
-    selectedRecords = [];
+    selection = [];
+    allSelectedRecords = [];
     refreshTable;
     error;
 
-
     @wire(getAllContacts)
-    contacts(result) {        
+    contacts(result) {
         this.refreshTable = result;
         if(result.data){
-            // let preparedContacts = [];
-            // result.data.forEach(contact => {
-            // let preparedContact = {};
-            // preparedContact.Id = contact.Id;
-            // preparedContact.AccountId = contact.AccountId;
-            // preparedContact.FirstName = contact.FirstName;
-            // preparedContact.LastName = contact.LastName;
-            // preparedContact.AccountName = contact.Account.Name;
-            // preparedContact.Phone = contact.Phone;
-            // preparedContact.Email = contact.Email;
-            // preparedContacts.push(preparedContact);
-        //});
-        this.data = result.data;
-        this.setPages(this.data); 
-        this.error = undefined;
+            this.data = result.data;
+            this.error = undefined;
+            let preparedContacts = [];
+            this.data.forEach(contact => {
+                let preparedContact = {};
+                preparedContact.Id = contact.Id;
+                preparedContact.AccountId = contact.AccountId;
+                preparedContact.FirstName = contact.FirstName;
+                preparedContact.LastName = contact.LastName;
+                preparedContact.AccountName = contact.Account.Name;
+                preparedContact.Phone = contact.Phone;
+                preparedContact.Email = contact.Email;
+                preparedContacts.push(preparedContact);
+            });
+            this.data = preparedContacts;
+            let numberOfPages = Math.ceil(this.data.length / this.perpage);
+            for (let i = 0; i < numberOfPages; i++) {
+                this.pages.push(i);
+                let startIndex = ((i+1)*this.perpage) - this.perpage;
+                let endIndex = ((i+1)*this.perpage);
+                let tmp = this.data.slice(startIndex, endIndex);
+                this.arrayDataPerPage.push(tmp);
+            }
+            this.pageData();
         }else if (result.error){
             this.error = result.error;
             this.data = undefined;
         }
     }
-    // async connectedCallback(){
-    //     this.data = await getAllContacts(); 
-    //     let preparedContacts = [];
-    //     this.data.forEach(contact => {
-    //         let preparedContact = {};
-    //         preparedContact.Id = contact.Id;
-    //         preparedContact.AccountId = contact.AccountId;
-    //         preparedContact.FirstName = contact.FirstName;
-    //         preparedContact.LastName = contact.LastName;
-    //         preparedContact.AccountName = contact.Account.Name;
-    //         preparedContact.Phone = contact.Phone;
-    //         preparedContact.Email = contact.Email;
-    //         preparedContacts.push(preparedContact);
-    //     });
-    //     this.data = preparedContacts;
-    //     console.log(this.data);
-    //     this.setPages(this.data);        
-    // }
 
     getSelectedRecords(event) {
-        let selectedRows = event.detail.selectedRows;
-        this.recordsCount = event.detail.selectedRows.length;
-        for (let i = 0; i < selectedRows.length; i++) {
-            let contact = {              
-                Id : selectedRows[i].Id,
-                AccountId: selectedRows[i].AccountId,
-                attributes: {
-                    type: "Contact"
-                }                
-            };
-           this.contactSet.add(contact);
-           this.selections[i] = contact;          
+        const selectedRows = event.detail.selectedRows;
+        if(selectedRows.length === 0){
+            this.selection[this.page] = [];
         }
-        console.log("Set: " + this.contactSet.size);
-        console.log("Selections: " + this.selections.forEach(c => console.log("Contact from array!!! Id: " + c.Id + ", AccountId: " + c.AccountId)));
-        if(this.contactSet){
-            this.selectedRecords = Array.from(this.contactSet);
+            let contactSet = new Set();
+            for (let i = 0; i < selectedRows.length; i++) {
+                let contact = {              
+                    Id : selectedRows[i].Id,
+                    AccountId: selectedRows[i].AccountId,
+                    attributes: {
+                        type: "Contact"
+                    }                
+                };
+            contactSet.add(contact);            
         }
-            
-        console.log('selectedRecords ====> ' + this.selectedRecords);
+        this.allSelectedRecords[this.page] = Array.from(contactSet);
+        this.recordsCount = this.allSelectedRecords.flat().length;
     }
 
-    deleteAll() {       
-        start({frontSource: JSON.stringify(this.selectedRecords)})
+    fillSelectionArray(){
+        if(this.allSelectedRecords[this.page].length > 0){
+            let temp = [];
+            for(let i = 0; i < this.allSelectedRecords[this.page].length; i++){
+                temp[i] = this.allSelectedRecords[this.page][i].Id+"";
+            }
+            this.selection[this.page] = temp;
+        } 
+    }
+
+    deleteAll() { 
+        this.fillSelectionArray();     
+        start({frontSource: JSON.stringify(this.allSelectedRecords.flat())})
         .then(result => {
-            window.console.log('result ====> ' + result.body);
+            window.console.log('result ====> ' + result);
             this.dispatchEvent(
                 new ShowToastEvent({
                     title: 'Success!!', 
                     message: this.recordsCount + ' Contacts are deleted.', 
                     variant: 'success'
                 }),
-            );
-                   
+            );                   
             this.template.querySelector('lightning-datatable').selectedRows = [];
-
-           return refreshApex(this.refreshTable);
-
+            this.refreshContactList();
         })
         .catch(error => {
             window.console.log(error);
@@ -118,56 +115,44 @@ export default class DeleteSelectedContacts extends LightningElement {
             this.dispatchEvent(
                 new ShowToastEvent({
                     title: res, 
-                    message: error.message, 
+                    message: error.body.message, 
                     variant: 'error'
                 }),
             );
         });
     }
-    
-    pageData = ()=>{
-        let page = this.page;
-        let perpage = this.perpage;
-        let startIndex = (page*perpage) - perpage;
-        let endIndex = (page*perpage);
-        let count = endIndex - startIndex;
-        let temp = [];
-        for(let i = 0; i < count; i++){
-            if((startIndex + i) < this.data.length - 1){
-                temp[i] = this.data[startIndex + i];
-            }else{
-                return;
-            }            
-        }
-         //Array.from(this.data.slice(startIndex,endIndex));
-        console.log("this.data: " + temp);
-        return temp;
-    }
 
-    setPages = (data)=>{
-        let numberOfPages = Math.ceil(data.length / this.perpage);
-        for (let index = 1; index <= numberOfPages; index++) {
-            this.pages.push(index);
-        }
-    }  
+    refreshContactList(){        
+        refreshApex(this.refreshTable);
+    }
+    
+    pageData = ()=>{      
+        this.dataPerPage = this.arrayDataPerPage[this.page];
+        if(this.selection[this.page]){
+            this.template.querySelector('lightning-datatable').selectedRows = this.selection[this.page];
+        }else{
+            this.allSelectedRecords[this.page] = [];
+            this.template.querySelector('lightning-datatable').selectedRows = [];
+        }   
+    }
     
     get hasPrev(){
-        return this.page > 1;
+        return this.page > 0;
     }
     
     get hasNext(){
-        return this.page < this.pages.length
+        return this.page < this.pages.length-1;
     }
 
     handleNextPage = ()=>{
-        ++this.page;
+        this.fillSelectionArray();
+        ++this.page;        
+        this.pageData();
     }
 
-    handlePrevPage = ()=>{
-        --this.page;
-    }
-
-    get currentPageData(){
-        return this.data = this.pageData();
-    }  
+    handlePrevPage = ()=>{ 
+        this.fillSelectionArray();       
+        --this.page;       
+        this.pageData();
+    } 
 }

@@ -13,12 +13,15 @@
             </lightning-button>
             <br/>
             <br/>
-            <lightning-datatable  key-field="id"
-                data={currentPageData}
-                columns={columns}                
-                selected-rows={selections}
+        <template if:true={dataPerPage}>
+            <lightning-datatable  key-field="Id"
+                data={dataPerPage}
+                columns={columns}
+                selected-rows={selection}
                 onrowselection={getSelectedRecords}>
             </lightning-datatable>
+        </template>
+            <br/>
             <br/>
             <div class = "nav-buttons">
                 <template if:true={hasPrev}>
