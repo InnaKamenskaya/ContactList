@@ -14,7 +14,7 @@ public with sharing class ContactController {
         }
     }
 
-    @AuraEnabled(cacheable = false)
+    @AuraEnabled()
     public static List<Contact> start(String frontSource){
         try {          
             List<Contact> source = (List<Contact>) JSON.deserialize(frontSource, List<Contact>.class);

@@ -15,6 +15,7 @@ const COLUMNS = [
 
 export default class DeleteSelectedContacts extends LightningElement {
     
+    allData = [];
     @track dataPerPage = [];
     @track recordsCount = 0;
     @track page = 0;
@@ -22,8 +23,9 @@ export default class DeleteSelectedContacts extends LightningElement {
 
     columns = COLUMNS;
     data = [];
-    arrayDataPerPage = [];
-    perpage = 5;
+    allSelection = new Set();
+    allSelectionContacts = new Set();
+    perpage = 10;
     selection = [];
     allSelectedRecords = [];
     refreshTable;
@@ -54,7 +56,7 @@ export default class DeleteSelectedContacts extends LightningElement {
                 let startIndex = ((i+1)*this.perpage) - this.perpage;
                 let endIndex = ((i+1)*this.perpage);
                 let tmp = this.data.slice(startIndex, endIndex);
-                this.arrayDataPerPage.push(tmp);
+                this.allData[i] = tmp;
             }
             this.pageData();
         }else if (result.error){
@@ -64,11 +66,9 @@ export default class DeleteSelectedContacts extends LightningElement {
     }
 
     getSelectedRecords(event) {
+        this.allSelectedRecords = [];
+        this.selection = [];
         const selectedRows = event.detail.selectedRows;
-        if(selectedRows.length === 0){
-            this.selection[this.page] = [];
-        }
-            let contactSet = new Set();
             for (let i = 0; i < selectedRows.length; i++) {
                 let contact = {              
                     Id : selectedRows[i].Id,
@@ -77,25 +77,22 @@ export default class DeleteSelectedContacts extends LightningElement {
                         type: "Contact"
                     }                
                 };
-            contactSet.add(contact);            
+            this.allSelectionContacts.add(contact); 
+            this.allSelection.add(contact.Id+""); 
+            console.log(this.allSelection.size);         
         }
-        this.allSelectedRecords[this.page] = Array.from(contactSet);
-        this.recordsCount = this.allSelectedRecords.flat().length;
+        this.allSelectedRecords = Array.from(this.allSelectionContacts);
+        this.selection = Array.from(this.allSelection);
+        for (let i = 0; i < this.selection.length; i++) {
+            console.log("++++++++++++++++++++++++++++++++");
+            console.log(this.selection[i] + " selected");
+            
+        }
+        this.recordsCount = this.allSelectedRecords.length;
     }
 
-    fillSelectionArray(){
-        if(this.allSelectedRecords[this.page].length > 0){
-            let temp = [];
-            for(let i = 0; i < this.allSelectedRecords[this.page].length; i++){
-                temp[i] = this.allSelectedRecords[this.page][i].Id+"";
-            }
-            this.selection[this.page] = temp;
-        } 
-    }
-
-    deleteAll() { 
-        this.fillSelectionArray();     
-        start({frontSource: JSON.stringify(this.allSelectedRecords.flat())})
+    deleteAll() {   
+        start({frontSource: JSON.stringify(this.allSelectedRecords)})
         .then(result => {
             window.console.log('result ====> ' + result);
             this.dispatchEvent(
@@ -104,8 +101,8 @@ export default class DeleteSelectedContacts extends LightningElement {
                     message: this.recordsCount + ' Contacts are deleted.', 
                     variant: 'success'
                 }),
-            );                   
-            this.template.querySelector('lightning-datatable').selectedRows = [];
+            ); 
+            this.selection = []; 
             this.refreshContactList();
         })
         .catch(error => {
@@ -122,18 +119,20 @@ export default class DeleteSelectedContacts extends LightningElement {
         });
     }
 
-    refreshContactList(){        
+    refreshContactList(){  
+        this.data = [];
+        this.allData = [];
+        this.selection = [];
+        this.allSelectedRecords = [];
+        this.dataPerPage = [];
+        this.recordsCount = 0;
+        this.page = 0;
+        this.pages = [];
         refreshApex(this.refreshTable);
     }
     
     pageData = ()=>{      
-        this.dataPerPage = this.arrayDataPerPage[this.page];
-        if(this.selection[this.page]){
-            this.template.querySelector('lightning-datatable').selectedRows = this.selection[this.page];
-        }else{
-            this.allSelectedRecords[this.page] = [];
-            this.template.querySelector('lightning-datatable').selectedRows = [];
-        }   
+        this.dataPerPage = this.allData[this.page];
     }
     
     get hasPrev(){
@@ -145,13 +144,11 @@ export default class DeleteSelectedContacts extends LightningElement {
     }
 
     handleNextPage = ()=>{
-        this.fillSelectionArray();
         ++this.page;        
         this.pageData();
     }
 
-    handlePrevPage = ()=>{ 
-        this.fillSelectionArray();       
+    handlePrevPage = ()=>{       
         --this.page;       
         this.pageData();
     } 
