@@ -42,7 +42,11 @@ export default class DeleteSelectedContacts extends LightningElement {
                 preparedContact.AccountId = contact.AccountId;
                 preparedContact.FirstName = contact.FirstName;
                 preparedContact.LastName = contact.LastName;
-                preparedContact.AccountName = contact.Account.Name;
+                if(contact.Account != null){
+                    preparedContact.AccountName = contact.Account.Name;
+                }else{
+                    preparedContact.AccountName = "";
+                }                
                 preparedContact.Phone = contact.Phone;
                 preparedContact.Email = contact.Email;
                 preparedContacts.push(preparedContact);
@@ -58,33 +62,46 @@ export default class DeleteSelectedContacts extends LightningElement {
             }
             this.pageData();
         }else if (result.error){
-            this.error = result.error;
+            this.error = result.error;d
             this.data = undefined;
         }
     }
 
     getSelectedRecords(event) {
         const selectedRows = event.detail.selectedRows;
-            let contactSet = new Set();
-            let contactSetId = new Set();
-            for (let i = 0; i < selectedRows.length; i++) {
-                let contact = {              
-                    Id : selectedRows[i].Id,
-                    AccountId: selectedRows[i].AccountId,
-                    attributes: {
-                        type: "Contact"
-                    }                
-                };
-            contactSet.add(contact);           
-            contactSetId.add(contact.Id+"");           
-        }
-        this.allSelectedRecords[this.page] = Array.from(contactSet);
-        this.selection[this.page] = Array.from(contactSetId);
-        this.recordsCount = this.allSelectedRecords.flat().length;
+            if(this.selection[this.data] === undefined || selectedRows.length > this.selection[this.data].length){
+                let contactSet = new Set();
+                let contactSetId = new Set();
+                for (let i = 0; i < selectedRows.length; i++) {
+                    let contact = {              
+                        Id : selectedRows[i].Id,
+                        AccountId: selectedRows[i].AccountId,
+                        attributes: {
+                            type: "Contact"
+                        }                
+                    };
+                contactSet.add(contact);           
+                contactSetId.add(contact.Id+"");           
+            }
+            this.allSelectedRecords[this.page] = Array.from(contactSet);
+            this.selection[this.page] = Array.from(contactSetId);
+            this.recordsCount = this.allSelectedRecords.flat().length;
+            }                     
     }
 
-    deleteAll() {      
-        start({frontSource: JSON.stringify(this.allSelectedRecords.flat())})
+    deleteAll() { 
+        let finalSelectedContacts = this.allSelectedRecords.flat();    
+        if (finalSelectedContacts.length === 0){
+            this.error = new Error("No one contacts are selected!");
+            this.dispatchEvent(
+                new ShowToastEvent({
+                    title: 'Error!!', 
+                    message: this.error.message, 
+                    variant: 'error'
+                }),
+            ); 
+        }else{
+            start({frontSource: JSON.stringify(finalSelectedContacts)})
         .then(result => {
             window.console.log('result ====> ' + result);
             this.dispatchEvent(
@@ -108,6 +125,8 @@ export default class DeleteSelectedContacts extends LightningElement {
                 }),
             );
         });
+        }
+        
     }
 
     refreshContactList(){  
