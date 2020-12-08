@@ -15,7 +15,6 @@ const COLUMNS = [
 
 export default class DeleteSelectedContacts extends LightningElement {
     
-    allData = [];
     @track dataPerPage = [];
     @track recordsCount = 0;
     @track page = 0;
@@ -23,9 +22,8 @@ export default class DeleteSelectedContacts extends LightningElement {
 
     columns = COLUMNS;
     data = [];
-    allSelection = new Set();
-    allSelectionContacts = new Set();
-    perpage = 10;
+    arrayDataPerPage = [];
+    perpage = 5;
     selection = [];
     allSelectedRecords = [];
     refreshTable;
@@ -56,7 +54,7 @@ export default class DeleteSelectedContacts extends LightningElement {
                 let startIndex = ((i+1)*this.perpage) - this.perpage;
                 let endIndex = ((i+1)*this.perpage);
                 let tmp = this.data.slice(startIndex, endIndex);
-                this.allData[i] = tmp;
+                this.arrayDataPerPage.push(tmp);
             }
             this.pageData();
         }else if (result.error){
@@ -66,9 +64,9 @@ export default class DeleteSelectedContacts extends LightningElement {
     }
 
     getSelectedRecords(event) {
-        this.allSelectedRecords = [];
-        this.selection = [];
         const selectedRows = event.detail.selectedRows;
+            let contactSet = new Set();
+            let contactSetId = new Set();
             for (let i = 0; i < selectedRows.length; i++) {
                 let contact = {              
                     Id : selectedRows[i].Id,
@@ -77,22 +75,16 @@ export default class DeleteSelectedContacts extends LightningElement {
                         type: "Contact"
                     }                
                 };
-            this.allSelectionContacts.add(contact); 
-            this.allSelection.add(contact.Id+""); 
-            console.log(this.allSelection.size);         
+            contactSet.add(contact);           
+            contactSetId.add(contact.Id+"");           
         }
-        this.allSelectedRecords = Array.from(this.allSelectionContacts);
-        this.selection = Array.from(this.allSelection);
-        for (let i = 0; i < this.selection.length; i++) {
-            console.log("++++++++++++++++++++++++++++++++");
-            console.log(this.selection[i] + " selected");
-            
-        }
-        this.recordsCount = this.allSelectedRecords.length;
+        this.allSelectedRecords[this.page] = Array.from(contactSet);
+        this.selection[this.page] = Array.from(contactSetId);
+        this.recordsCount = this.allSelectedRecords.flat().length;
     }
 
-    deleteAll() {   
-        start({frontSource: JSON.stringify(this.allSelectedRecords)})
+    deleteAll() {      
+        start({frontSource: JSON.stringify(this.allSelectedRecords.flat())})
         .then(result => {
             window.console.log('result ====> ' + result);
             this.dispatchEvent(
@@ -102,7 +94,6 @@ export default class DeleteSelectedContacts extends LightningElement {
                     variant: 'success'
                 }),
             ); 
-            this.selection = []; 
             this.refreshContactList();
         })
         .catch(error => {
@@ -120,19 +111,25 @@ export default class DeleteSelectedContacts extends LightningElement {
     }
 
     refreshContactList(){  
-        this.data = [];
-        this.allData = [];
-        this.selection = [];
-        this.allSelectedRecords = [];
         this.dataPerPage = [];
         this.recordsCount = 0;
         this.page = 0;
         this.pages = [];
+        this.data = [];
+        this.arrayDataPerPage = []; 
+        this.selection = [];
+        this.allSelectedRecords = [];     
         refreshApex(this.refreshTable);
     }
     
     pageData = ()=>{      
-        this.dataPerPage = this.allData[this.page];
+        this.dataPerPage = this.arrayDataPerPage[this.page];
+        if(this.selection[this.page]){
+            this.template.querySelector('lightning-datatable').selectedRows = this.selection[this.page];
+        }else{
+            this.allSelectedRecords[this.page] = [];
+            this.template.querySelector('lightning-datatable').selectedRows = [];
+        }   
     }
     
     get hasPrev(){
@@ -148,7 +145,7 @@ export default class DeleteSelectedContacts extends LightningElement {
         this.pageData();
     }
 
-    handlePrevPage = ()=>{       
+    handlePrevPage = ()=>{      
         --this.page;       
         this.pageData();
     } 
