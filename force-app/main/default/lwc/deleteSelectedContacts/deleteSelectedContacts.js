@@ -42,11 +42,7 @@ export default class DeleteSelectedContacts extends LightningElement {
                 preparedContact.AccountId = contact.AccountId;
                 preparedContact.FirstName = contact.FirstName;
                 preparedContact.LastName = contact.LastName;
-                if(contact.Account != null){
-                    preparedContact.AccountName = contact.Account.Name;
-                }else{
-                    preparedContact.AccountName = "";
-                }                
+                preparedContact.AccountName = contact.Account.Name;               
                 preparedContact.Phone = contact.Phone;
                 preparedContact.Email = contact.Email;
                 preparedContacts.push(preparedContact);
