@@ -5,7 +5,7 @@ public with sharing class ContactController {
     @AuraEnabled(cacheable = true)
     public static List<Contact> getAllContacts(){
         try {
-            return [SELECT Id, FirstName, LastName, a.Name, Phone, Email, (SELECT Id FROM Cases)
+            return [SELECT Id, FirstName, LastName, a.Name, Phone, Email
             FROM Contact c, c.Account a            
             WITH SECURITY_ENFORCED ORDER BY LastName];
             

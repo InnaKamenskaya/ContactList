@@ -6,26 +6,25 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import{ refreshApex } from '@salesforce/apex';
 
 const COLUMNS = [
-    {label: 'FirstName', fieldName: 'FirstName', type: 'text'},
-    {label: 'LastName', fieldName: 'LastName', type: 'text'},
+    {label: 'Name', fieldName: 'nameLink', type: 'url', typeAttributes: 
+    { label: { fieldName: "Name" }, tooltip:"Name", target: "_blank" }},
     {label: 'Account Name', fieldName: 'AccountName', type: 'text'},
     {label: 'Phone', fieldName: 'Phone', type: 'phone'},
     {label: 'Email', fieldName: 'Email', type: 'email'}
 ];
 
 export default class DeleteSelectedContacts extends LightningElement {
-    
-    @track dataPerPage = [];
-    @track recordsCount = 0;
-    @track page = 0;
-    @track pages = [];
 
     columns = COLUMNS;
     data = [];
+    dataPerPage = [];
+    recordsCount = 0;
+    page = 0;
+    pages = [];
     arrayDataPerPage = [];
-    perpage = 5;
+    perpage = 10;
     selection = [];
-    allSelectedRecords = [];
+    allContactsMap = new Map();
     refreshTable;
     error;
 
@@ -39,13 +38,21 @@ export default class DeleteSelectedContacts extends LightningElement {
             this.data.forEach(contact => {
                 let preparedContact = {};
                 preparedContact.Id = contact.Id;
+                preparedContact.nameLink = "/" + contact.Id;
                 preparedContact.AccountId = contact.AccountId;
-                preparedContact.FirstName = contact.FirstName;
-                preparedContact.LastName = contact.LastName;
-                preparedContact.AccountName = contact.Account.Name;               
+                preparedContact.Name = contact.FirstName + " " + contact.LastName;
+                preparedContact.AccountName = contact.Account ? contact.Account.Name : "";               
                 preparedContact.Phone = contact.Phone;
                 preparedContact.Email = contact.Email;
                 preparedContacts.push(preparedContact);
+                let temp = {              
+                    Id : contact.Id,
+                    AccountId: contact.AccountId,
+                    attributes: {
+                        type: "Contact"
+                    }                
+                };
+                this.allContactsMap.set(contact.Id+"", temp);
             });
             this.data = preparedContacts;
             let numberOfPages = Math.ceil(this.data.length / this.perpage);
@@ -65,39 +72,39 @@ export default class DeleteSelectedContacts extends LightningElement {
 
     getSelectedRecords(event) {
         const selectedRows = event.detail.selectedRows;
-            if(this.selection[this.data] === undefined || selectedRows.length > this.selection[this.data].length){
-                let contactSet = new Set();
-                let contactSetId = new Set();
-                for (let i = 0; i < selectedRows.length; i++) {
-                    let contact = {              
-                        Id : selectedRows[i].Id,
-                        AccountId: selectedRows[i].AccountId,
-                        attributes: {
-                            type: "Contact"
-                        }                
-                    };
-                contactSet.add(contact);           
-                contactSetId.add(contact.Id+"");           
+        if(this.selection[this.data] === undefined || selectedRows.length != this.selection[this.data].length){
+            let contactSetId = new Set();
+            for (let i = 0; i < selectedRows.length; i++) {
+            contactSetId.add(selectedRows[i].Id);           
             }
-            this.allSelectedRecords[this.page] = Array.from(contactSet);
-            this.selection[this.page] = Array.from(contactSetId);
-            this.recordsCount = this.allSelectedRecords.flat().length;
-            }                     
+        this.selection[this.page] = Array.from(contactSetId);
+        this.recordsCount = this.selection.flat().length;
+        }                     
     }
 
-    deleteAll() { 
-        let finalSelectedContacts = this.allSelectedRecords.flat();    
-        if (finalSelectedContacts.length === 0){
+    getFinalSelectedContacts(){
+        let contactsId = this.selection.flat();
+        let finalSelectedContacts = [];
+        if(contactsId.length === 0){
             this.error = new Error("No one contacts are selected!");
-            this.dispatchEvent(
-                new ShowToastEvent({
+             this.dispatchEvent(
+             new ShowToastEvent({
                     title: 'Error!!', 
                     message: this.error.message, 
                     variant: 'error'
                 }),
-            ); 
+           );           
+           throw this.error;
         }else{
-            start({frontSource: JSON.stringify(finalSelectedContacts)})
+            for (let i = 0; i < contactsId.length; i++) {
+                finalSelectedContacts.push(this.allContactsMap.get(contactsId[i])); 
+            }
+        }
+        return finalSelectedContacts;
+    }
+
+    deleteAll() {        
+        start({frontSource: JSON.stringify(this.getFinalSelectedContacts())})
         .then(result => {
             window.console.log('result ====> ' + result);
             this.dispatchEvent(
@@ -121,9 +128,7 @@ export default class DeleteSelectedContacts extends LightningElement {
                 }),
             );
         });
-        }
-        
-    }
+    }       
 
     refreshContactList(){  
         this.dataPerPage = [];
@@ -132,8 +137,7 @@ export default class DeleteSelectedContacts extends LightningElement {
         this.pages = [];
         this.data = [];
         this.arrayDataPerPage = []; 
-        this.selection = [];
-        this.allSelectedRecords = [];     
+        this.selection = [];     
         refreshApex(this.refreshTable);
     }
     
