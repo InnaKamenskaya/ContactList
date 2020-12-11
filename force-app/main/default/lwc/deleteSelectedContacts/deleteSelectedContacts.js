@@ -21,7 +21,7 @@ export default class DeleteSelectedContacts extends LightningElement {
     recordsCount = 0;
     page = 0;
     pages = [];
-    arrayDataPerPage = [];
+    allDataPerPage = [];
     perpage = 10;
     selection = [];
     allContactsMap = new Map();
@@ -48,11 +48,9 @@ export default class DeleteSelectedContacts extends LightningElement {
                 let temp = {              
                     Id : contact.Id,
                     AccountId: contact.AccountId,
-                    attributes: {
-                        type: "Contact"
-                    }                
+                    sobjectType: "Contact"
                 };
-                this.allContactsMap.set(contact.Id+"", temp);
+                this.allContactsMap.set(contact.Id, temp);
             });
             this.data = preparedContacts;
             let numberOfPages = Math.ceil(this.data.length / this.perpage);
@@ -61,11 +59,11 @@ export default class DeleteSelectedContacts extends LightningElement {
                 let startIndex = ((i+1)*this.perpage) - this.perpage;
                 let endIndex = ((i+1)*this.perpage);
                 let tmp = this.data.slice(startIndex, endIndex);
-                this.arrayDataPerPage.push(tmp);
+                this.allDataPerPage.push(tmp);
             }
             this.pageData();
         }else if (result.error){
-            this.error = result.error;d
+            this.error = result.error;
             this.data = undefined;
         }
     }
@@ -89,7 +87,7 @@ export default class DeleteSelectedContacts extends LightningElement {
             this.error = new Error("No one contacts are selected!");
              this.dispatchEvent(
              new ShowToastEvent({
-                    title: 'Error!!', 
+                    title: 'Error!', 
                     message: this.error.message, 
                     variant: 'error'
                 }),
@@ -104,12 +102,11 @@ export default class DeleteSelectedContacts extends LightningElement {
     }
 
     deleteAll() {        
-        start({frontSource: JSON.stringify(this.getFinalSelectedContacts())})
-        .then(result => {
-            window.console.log('result ====> ' + result);
+        start({selectedContacts: JSON.stringify(this.getFinalSelectedContacts())})
+        .then(() => {
             this.dispatchEvent(
                 new ShowToastEvent({
-                    title: 'Success!!', 
+                    title: 'Success!', 
                     message: this.recordsCount + ' Contacts are deleted.', 
                     variant: 'success'
                 }),
@@ -117,7 +114,6 @@ export default class DeleteSelectedContacts extends LightningElement {
             this.refreshContactList();
         })
         .catch(error => {
-            window.console.log(error);
             let tmp = error.body.message.split(':')
             let res = tmp.slice(1).join(' ');
             this.dispatchEvent(
@@ -136,17 +132,16 @@ export default class DeleteSelectedContacts extends LightningElement {
         this.page = 0;
         this.pages = [];
         this.data = [];
-        this.arrayDataPerPage = []; 
+        this.allDataPerPage = []; 
         this.selection = [];     
         refreshApex(this.refreshTable);
     }
     
     pageData = ()=>{      
-        this.dataPerPage = this.arrayDataPerPage[this.page];
+        this.dataPerPage = this.allDataPerPage[this.page];
         if(this.selection[this.page]){
             this.template.querySelector('lightning-datatable').selectedRows = this.selection[this.page];
         }else{
-            this.allSelectedRecords[this.page] = [];
             this.template.querySelector('lightning-datatable').selectedRows = [];
         }   
     }
