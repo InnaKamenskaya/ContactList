@@ -102,7 +102,7 @@ export default class DeleteSelectedContacts extends LightningElement {
     }
 
     deleteAll() {        
-        start({selectedContacts: JSON.stringify(this.getFinalSelectedContacts())})
+        start({selectedContacts: this.getFinalSelectedContacts()})
         .then(() => {
             this.dispatchEvent(
                 new ShowToastEvent({
@@ -114,11 +114,10 @@ export default class DeleteSelectedContacts extends LightningElement {
             this.refreshContactList();
         })
         .catch(error => {
-            let tmp = error.body.message.split(':')
-            let res = tmp.slice(1).join(' ');
+            let tmp = error.body.message.split(':').slice(1).join(' ');
             this.dispatchEvent(
                 new ShowToastEvent({
-                    title: res, 
+                    title: tmp, 
                     message: error.body.message, 
                     variant: 'error'
                 }),

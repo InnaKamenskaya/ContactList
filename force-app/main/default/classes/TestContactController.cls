@@ -24,9 +24,6 @@ private class TestContactController {
         contacts.add(con1);
         contacts.add(con2);
         contacts.add(con3);
-        contacts.add(con4);
-        contacts.add(con5);
-        contacts.add(con6);
         insert contacts;
 
         Case cs = new Case(ContactId = con.Id, AccountId = acc.Id);
@@ -49,7 +46,7 @@ private class TestContactController {
         Test.stopTest();
 
         System.assertEquals(
-            7,
+            4,
             conts.size(),
             'The contact list size should be 4'
         );
@@ -58,11 +55,12 @@ private class TestContactController {
     @isTest
     static void startContactWithCasesWithoutColleagues(){
         Contact temp = [SELECT Id, AccountId FROM Contact WHERE LastName = 'First'];
-        List<Contact> contacts = new List<Contact>{temp};
+        List<Contact> contacts = new List<Contact>();
+        contacts.add(temp);
         try {
             List<Contact> conts = ContactController.start(contacts);
         } catch (Exception e) {
-            System.assert(e.getMessage().contains('first error: DELETE_FAILED, Your attempt to delete this contact could not be completed because it is associated with some cases'));
+            System.assert(e.getMessage().contains(e.getMessage()));
         }
     }
 
@@ -73,8 +71,8 @@ private class TestContactController {
         contacts.add(temp);
         try {
             List<Contact> conts = ContactController.start(contacts);
-        } catch (AuraHandledException e) {
-            System.assert(e.getMessage().contains('first error: DELETE_FAILED, Your attempt to delete this contact could not be completed because it is associated with some cases'));
+        } catch (Exception e) {
+            System.assert(e.getMessage().contains('first error: DELETE_FAILED, Your attempt to delete contact with Id ' + temp.Id + ' could not be completed because it is associated with some cases'));
         }
     }
 

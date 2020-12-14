@@ -22,23 +22,25 @@ public with sharing class ContactController {
                 List<Id> accountsId = getAccountsId(selectedContacts);
                 Map <Id, List<Contact>> accountToContacts = getColleagues(selectedContacts, accountsId);
                 List<Id> allContactsId = getAllContactsId(selectedContacts, accountToContacts);
-                Map<Contact, List<Case>> contactToCases = getAllCases(allContactsId);  
-                
-                          
-                Map<Contact, List<Case>> delContactsToCases = getSpecificContactsWithCases(true, contactToCases, selectedContacts);
-                Map<Contact,List<Case>> stayContactsToCases = getSpecificContactsWithCases(false, contactToCases, selectedContacts);
-                
-                for(Contact delContact : delContactsToCases.keySet()){
-                    if(delContactsToCases.get(delContact).size() != 0){
+                Map<Id, List<Case>> contactToCases = getAllCases(allContactsId);
+                Map<Id, List<Case>> delContactsToCases = getSpecificContactsWithCases(true, contactToCases, selectedContacts);
+                Map<Id, List<Case>> stayContactsToCases = getSpecificContactsWithCases(false, contactToCases, selectedContacts);
+                for(Id delContactId : delContactsToCases.keySet()){
+                    if(delContactsToCases.get(delContactId).size() != 0){
+                        Contact delContact = new Contact();
+                        for(Contact con : selectedContacts){
+                            if(delContactId == con.Id){
+                                delContact = con;
+                            }
+                        }
                         List<Contact> colleagues = accountToContacts.get(delContact.AccountId);
                         if (colleagues == null || colleagues.isEmpty()) {
                             AuraHandledException e = new AuraHandledException('');
-                            e.setMessage('first error: DELETE_FAILED, Your attempt to delete this contact could not be completed because it is associated with some cases');
+                            e.setMessage('first error: DELETE_FAILED, Your attempt to delete contact with Id ' + delContact.Id + ' could not be completed because it is associated with some cases');
                             throw e;
                         } else {
                             Contact newExecutor = getNewExecutor(colleagues, stayContactsToCases);
-                            for(Case contactCase : delContactsToCases.get(delContact)){
-                                
+                            for(Case contactCase : delContactsToCases.get(delContactId)){                                
                                 contactCase.ContactId = newExecutor.Id;
                                 updateCases.add(contactCase);
                             }
@@ -49,7 +51,10 @@ public with sharing class ContactController {
                 delete selectedContacts;    
                 return selectedContacts;    
             } catch (Exception e) {
-                throw new AuraHandledException(e.getMessage() + e.getStackTraceString());
+                String message = e.getMessage();
+                AuraHandledException ex = new AuraHandledException(message);
+                ex.setMessage(message);
+                throw ex;
             }
         }       
     }
@@ -57,7 +62,9 @@ public with sharing class ContactController {
     private static List<Id> getAccountsId(List<Contact> contactsToDelete){
         Set<Id> accountsId = new Set<Id>();
         for (Contact delContact : contactsToDelete) {
-            accountsId.add(delContact.AccountId);
+            if (delContact.AccountId != null) {
+                accountsId.add(delContact.AccountId);
+            }            
         }
         return new List<Id>(accountsId);
     }
@@ -86,10 +93,10 @@ public with sharing class ContactController {
         return new List<Id>(new Map<Id, Contact>(tempContacts).keySet());
     }
 
-    private static Map<Contact, List<Case>> getAllCases(List<Id> allContactsId){
-        Map<Contact, List<Case>> contactToCases = new Map<Contact, List<Case>>();
-        for(Contact con : [SELECT Id, AccountId, (SELECT Id, Status, ContactId FROM Cases) FROM Contact WHERE Id IN :allContactsId]){
-            contactToCases.put(new Contact(Id = con.Id, AccountId = con.AccountId), con.Cases);
+    private static Map<Id, List<Case>> getAllCases(List<Id> allContactsId){
+        Map<Id, List<Case>> contactToCases = new Map<Id, List<Case>>();
+        for(Contact con : [SELECT Id, (SELECT Id, Status, ContactId FROM Cases) FROM Contact WHERE Id IN :allContactsId]){
+            contactToCases.put(con.Id, con.Cases);
             if(con.Cases.size() > maxCases){
                 maxCases = con.Cases.size();
             }
@@ -97,27 +104,31 @@ public with sharing class ContactController {
         return contactToCases;
     }
 
-    private static Map<Contact, List<Case>> getSpecificContactsWithCases(Boolean check, Map<Contact, List<Case>> contactToCases, List<Contact> delContacts){
-        Map<Contact, List<Case>> specContactToCases = new Map<Contact, List<Case>>();
-        Map<Contact, List<Case>> del = new Map<Contact, List<Case>>();
-        Map<Contact, List<Case>> stay = new Map<Contact, List<Case>>();
-        for(Contact con : contactToCases.keySet()){
-            if (delContacts.contains(con)) {
+    private static Map<Id, List<Case>> getSpecificContactsWithCases(Boolean check, Map<Id, List<Case>> contactToCases, List<Contact> delContacts){
+        List<Id> delContactsId = new List<Id>();
+        for (Contact con : delContacts) {
+            delContactsId.add(con.Id);
+        }
+        Map<Id, List<Case>> specContactToCases = new Map<Id, List<Case>>();
+        Map<Id, List<Case>> del = new Map<Id, List<Case>>();
+        Map<Id, List<Case>> stay = new Map<Id, List<Case>>();
+        for(Id con : contactToCases.keySet()){
+            if (delContactsId.contains(con)) {
                 del.put(con, contactToCases.get(con));
             }else {
                 stay.put(con, contactToCases.get(con));
             }            
         }
-        specContactToCases = check ? del : stay;
+        specContactToCases = check ? del : stay;        
         return specContactToCases;
     }
 
-   private static Contact getNewExecutor(List<Contact> coll, Map<Contact, List<Case>> stayContactsToCases){
+   private static Contact getNewExecutor(List<Contact> coll, Map<Id, List<Case>> stayContactsToCases){
         Integer min = maxCases;
         Contact newExecutor = new Contact();
         for(Contact con : coll){
-            if(stayContactsToCases.get(con).size() <= min){
-                min = stayContactsToCases.get(con).size();
+            if(stayContactsToCases.get(con.Id).size() <= min){
+                min = stayContactsToCases.get(con.Id).size();
                 newExecutor = con;
             }
         }
