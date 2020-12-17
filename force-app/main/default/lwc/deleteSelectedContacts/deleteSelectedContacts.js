@@ -1,4 +1,4 @@
-import { LightningElement, track, wire } from 'lwc';
+import { LightningElement, wire } from 'lwc';
 import getAllContacts from '@salesforce/apex/ContactController.getAllContacts';
 import start from '@salesforce/apex/ContactController.start';
 

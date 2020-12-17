@@ -1,7 +1,11 @@
 public with sharing class ContactController {
 
+    public class NewExecutorNotFoundException extends Exception{}
     private static Integer maxCases = 0;
-    private static Integer MAX_CONTACTS = 50000;
+    private static final Integer MAX_CONTACTS = 50000;
+    private static final String ERROR_MESSAGE = 'first error: DELETE_FAILED, Your attempt to delete contact with Id {0} could not be completed because it is associated with some cases';
+    @testVisible
+    private static String errorMessageTest = '';
 
     @AuraEnabled(cacheable = true)
     public static List<Contact> getAllContacts(){
@@ -12,10 +16,8 @@ public with sharing class ContactController {
 
     @AuraEnabled(cacheable = false)
     public static List<Contact> start(List<Contact> selectedContacts){
-        if (selectedContacts.isEmpty()) {
-            AuraHandledException e = new AuraHandledException('');
-            e.setMessage('No one contacts are selected!');
-            throw e;
+        if (selectedContacts == null) {
+            return null;
         }else {
             try {
                 List<Case> updateCases = new List<Case>();
@@ -35,9 +37,8 @@ public with sharing class ContactController {
                         }
                         List<Contact> colleagues = accountToContacts.get(delContact.AccountId);
                         if (colleagues == null || colleagues.isEmpty()) {
-                            AuraHandledException e = new AuraHandledException('');
-                            e.setMessage('first error: DELETE_FAILED, Your attempt to delete contact with Id ' + delContact.Id + ' could not be completed because it is associated with some cases');
-                            throw e;
+                            String message = String.format(ERROR_MESSAGE, new List<Object>{delContactId});
+                            throw new NewExecutorNotFoundException(message);
                         } else {
                             Contact newExecutor = getNewExecutor(colleagues, stayContactsToCases);
                             for(Case contactCase : delContactsToCases.get(delContactId)){                                
@@ -51,9 +52,11 @@ public with sharing class ContactController {
                 delete selectedContacts;    
                 return selectedContacts;    
             } catch (Exception e) {
-                String message = e.getMessage();
+                String message = e.getMessage();                
                 AuraHandledException ex = new AuraHandledException(message);
-                ex.setMessage(message);
+                if(Test.isRunningTest()){ 
+                    errorMessageTest = message;
+                }
                 throw ex;
             }
         }       
@@ -112,11 +115,11 @@ public with sharing class ContactController {
         Map<Id, List<Case>> specContactToCases = new Map<Id, List<Case>>();
         Map<Id, List<Case>> del = new Map<Id, List<Case>>();
         Map<Id, List<Case>> stay = new Map<Id, List<Case>>();
-        for(Id con : contactToCases.keySet()){
-            if (delContactsId.contains(con)) {
-                del.put(con, contactToCases.get(con));
+        for(Id contactId : contactToCases.keySet()){
+            if (delContactsId.contains(contactId)) {
+                del.put(contactId, contactToCases.get(contactId));
             }else {
-                stay.put(con, contactToCases.get(con));
+                stay.put(contactId, contactToCases.get(contactId));
             }            
         }
         specContactToCases = check ? del : stay;        
