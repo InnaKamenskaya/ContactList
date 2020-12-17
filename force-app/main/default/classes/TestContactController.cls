@@ -89,7 +89,7 @@ private class TestContactController {
         Test.startTest();
         List<Contact> resConts = ContactController.start(contacts);
         Test.stopTest();
-        System.assertEquals(temp, resConts.get(0));
+        System.assertEquals(temp, resConts.get(0),'The same contact should be expected');
 
         Contact stayContact = [SELECT Id, AccountId, (SELECT Id FROM Cases) FROM Contact WHERE LastName = 'Fourth' LIMIT 1];
         System.assertEquals(2, stayContact.Cases.size(), 'The contact list size should be 2');
