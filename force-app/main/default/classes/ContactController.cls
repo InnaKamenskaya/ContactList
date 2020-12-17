@@ -18,15 +18,15 @@ public with sharing class ContactController {
     public static List<Contact> start(List<Contact> selectedContacts){
         if (selectedContacts == null) {
             return null;
-        }else {
-            try {
-                List<Case> updateCases = new List<Case>();
+        }else {            
                 List<Id> accountsId = getAccountsId(selectedContacts);
                 Map <Id, List<Contact>> accountToContacts = getColleagues(selectedContacts, accountsId);
                 List<Id> allContactsId = getAllContactsId(selectedContacts, accountToContacts);
                 Map<Id, List<Case>> contactToCases = getAllCases(allContactsId);
                 Map<Id, List<Case>> delContactsToCases = getSpecificContactsWithCases(true, contactToCases, selectedContacts);
                 Map<Id, List<Case>> stayContactsToCases = getSpecificContactsWithCases(false, contactToCases, selectedContacts);
+            try {
+                List<Case> updateCases = new List<Case>();               
                 for(Id delContactId : delContactsToCases.keySet()){
                     if(delContactsToCases.get(delContactId).size() != 0){
                         Contact delContact = new Contact();
