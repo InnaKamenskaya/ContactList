@@ -42,11 +42,7 @@ private class TestContactController {
         Test.startTest();
         List<Contact> conts = ContactController.getAllContacts();
         Test.stopTest();
-        System.assertEquals(
-            4,
-            conts.size(),
-            'The contact list size should be 4'
-        );
+        System.assertEquals(4, conts.size(), 'The contact list size should be 4');
     }
 
     @isTest
@@ -59,7 +55,8 @@ private class TestContactController {
             List<Contact> co= ContactController.start(contacts);
             Test.stopTest();
         } catch (Exception e) {
-            System.assertEquals(ContactController.errorMessageTest, String.format(ERROR_MESSAGE, new List<Object>{temp.Id}));
+            String message = String.format(ERROR_MESSAGE, new List<Object>{temp.Id});
+            System.assertEquals(ContactController.errorMessageTest, message, 'Error message should be ' + message);
         }
     }
 
@@ -73,14 +70,15 @@ private class TestContactController {
             List<Contact> conts = ContactController.start(contacts);
             Test.stopTest();
         } catch (Exception e) {
-            System.assertEquals(ContactController.errorMessageTest, String.format(ERROR_MESSAGE, new List<Object>{temp.Id}));
+            String message = String.format(ERROR_MESSAGE, new List<Object>{temp.Id});
+            System.assertEquals(ContactController.errorMessageTest, message, 'Error message should be ' + message);
         }
     }
 
     @isTest
     static void startNegativeWithNullTest(){
         List<Contact> conts = ContactController.start(null);
-        System.assertEquals(null, conts);        
+        System.assertEquals(null, conts, 'The contact list should be null');        
     }
 
     @isTest
@@ -94,10 +92,6 @@ private class TestContactController {
         System.assertEquals(temp, resConts.get(0));
 
         Contact stayContact = [SELECT Id, AccountId, (SELECT Id FROM Cases) FROM Contact WHERE LastName = 'Fourth' LIMIT 1];
-        System.assertEquals(
-            2,
-            stayContact.Cases.size(),
-            'The contact list size should be 2'
-        );
+        System.assertEquals(2, stayContact.Cases.size(), 'The contact list size should be 2');
     }
 }
