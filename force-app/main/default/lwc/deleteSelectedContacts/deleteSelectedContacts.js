@@ -1,6 +1,6 @@
 import { LightningElement, wire } from 'lwc';
 import getAllContacts from '@salesforce/apex/ContactController.getAllContacts';
-import start from '@salesforce/apex/ContactController.start';
+import deleteContacts from '@salesforce/apex/ContactController.deleteContacts';
 
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import{ refreshApex } from '@salesforce/apex';
@@ -47,7 +47,6 @@ export default class DeleteSelectedContacts extends LightningElement {
                 preparedContacts.push(preparedContact);
                 let temp = {              
                     Id : contact.Id,
-                    AccountId: contact.AccountId,
                     sobjectType: "Contact"
                 };
                 this.allContactsMap.set(contact.Id, temp);
@@ -102,7 +101,7 @@ export default class DeleteSelectedContacts extends LightningElement {
     }
 
     deleteAll() {        
-        start({selectedContacts: this.getFinalSelectedContacts()})
+        deleteContacts({selectedContacts: this.getFinalSelectedContacts()})
         .then(() => {
             this.dispatchEvent(
                 new ShowToastEvent({
