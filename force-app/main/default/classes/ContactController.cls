@@ -15,14 +15,9 @@ public with sharing class ContactController {
             return null;
         }
         List<Case> updateCases = new List<Case>();
-        for (Contact delContact : [SELECT Id, (SELECT Id, ContactId FROM Cases) FROM Contact WHERE Id IN :selectedContacts]) {
-            if (delContact.Cases.isEmpty()) {
-                continue;
-            }
-            for (Case delConCase : delContact.Cases) {
-                delConCase.ContactId = null;
-                updateCases.add(delConCase);
-            }
+        for (Case updateCase : [SELECT Id, ContactId FROM Case WHERE ContactId IN :selectedContacts]) {            
+            updateCase.ContactId = null;
+            updateCases.add(updateCase);            
         }
         update updateCases;
         delete selectedContacts;
