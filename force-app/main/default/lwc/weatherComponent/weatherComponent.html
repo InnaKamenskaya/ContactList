@@ -1,0 +1,33 @@
+<template>
+    <lightning-card>
+        <lightning-layout>
+            <lightning-layout-item size="3" medium-device-size="4" padding="around-small">
+                <lightning-card icon-name="standard:topic" title="Temperature">
+                    <div class="sdls-align_absolute-center color-blue">
+                        <template if:true={account}>
+                            {currentTemp}
+                        </template>
+                    </div>
+                </lightning-card>
+            </lightning-layout-item>
+            <lightning-layout-item size="3" medium-device-size="4" padding="around-small">
+                <lightning-card icon-name="utility:flow" title="Wind Speed">
+                    <div class="sdls-align_absolute-center color-grey">
+                        <template if:true={account}>
+                            {currentWindSpeed}
+                        </template>
+                    </div>
+                </lightning-card>
+            </lightning-layout-item>
+            <lightning-layout-item size="3" medium-device-size="4" padding="around-small">
+                <lightning-card icon-name="standard:calibration" title="Humidity">
+                    <div class="sdls-align_absolute-center color-green">
+                        <template if:true={account}>
+                            {currentHumidity}
+                        </template>
+                    </div>
+                </lightning-card>
+            </lightning-layout-item>
+        </lightning-layout>
+    </lightning-card>    
+</template>
