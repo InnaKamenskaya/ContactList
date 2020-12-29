@@ -1,4 +1,4 @@
-public without sharing class ContactController {
+public with sharing class ContactController {
 
     private static final Integer MAX_CONTACTS = 50000;
 

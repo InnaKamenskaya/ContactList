@@ -52,7 +52,7 @@ private class TestContactController {
     }
 
     @isTest
-    static void startPositivTest(){
+    static void startPositiveTest(){
         Contact temp = [SELECT Id FROM Contact WHERE LastName = 'Third' LIMIT 1];
         List<Contact> contacts = new List<Contact>();
         contacts.add(temp);

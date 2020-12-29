@@ -7,7 +7,7 @@ import{ refreshApex } from '@salesforce/apex';
 
 const COLUMNS = [
     {label: 'Name', fieldName: 'nameLink', type: 'url', typeAttributes: 
-    { label: { fieldName: "Name" }, tooltip:"Name", target: "_blank" }},
+    {label: { fieldName: "Name" }, tooltip:"Name", target: "_blank" }},
     {label: 'Account Name', fieldName: 'AccountName', type: 'text'},
     {label: 'Phone', fieldName: 'Phone', type: 'phone'},
     {label: 'Email', fieldName: 'Email', type: 'email'}
