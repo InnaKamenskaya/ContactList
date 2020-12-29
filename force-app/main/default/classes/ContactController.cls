@@ -1,4 +1,4 @@
-public with sharing class ContactController {
+public without sharing class ContactController {
 
     private static final Integer MAX_CONTACTS = 50000;
 
@@ -21,6 +21,6 @@ public with sharing class ContactController {
         }
         update updateCases;
         delete selectedContacts;
-        return selectedContacts;      
+        return selectedContacts;       
     }
 }
