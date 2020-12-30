@@ -13,10 +13,31 @@
             </lightning-button>
             <br/>
             <br/>
-            <lightning-datatable  key-field="id"
-                data={data}
+            <lightning-datatable  key-field="Id"
+                data={dataPerPage}
                 columns={columns}
-                onrowselection={getSelectedRecords}></lightning-datatable>
+                onrowselection={getSelectedRecords}>
+            </lightning-datatable>
+            <br/>
+            <br/>
+            <br/>
+            <div class = "nav-buttons">
+                <template if:true={hasPrev}>
+                    <lightning-button
+                    label="Previous Page"
+                    variant="brand"
+                    class="slds-m-left_x-small"
+                     onclick={handlePrevPage}></lightning-button>
+                </template>
+                <template if:true={hasNext}>
+                    <lightning-button 
+                    label="Next Page"
+                    variant="brand"
+                    class="slds-m-left_x-small"
+                    onclick={handleNextPage}></lightning-button>
+                </template>
+            </div>
+            <br/>
         </template>
     </lightning-card>    
 </template>
