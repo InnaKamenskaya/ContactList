@@ -7,7 +7,10 @@ global class WeatherService {
         if(location == null || location ==''){
             return null;
         }
-        String apiKey = [SELECT Key__c FROM WeatherAPIKey__mdt WHERE Label =: META_DATA_LABEL].Key__c;
+        String apiKey = ([SELECT Key__c FROM WeatherAPIKey__mdt WHERE Label =: META_DATA_LABEL] == null) ? null : [SELECT Key__c FROM WeatherAPIKey__mdt WHERE Label =: META_DATA_LABEL].Key__c;
+        if (apiKey == null || apiKey == '') {
+            return null;
+        }
         HttpRequest req = new HttpRequest();
         req.setEndpoint('callout:WeatherAPI?q='+ location + '&units=metric' + '&appid=' + apiKey);
         req.setMethod('GET');
