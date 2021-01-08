@@ -1,8 +1,6 @@
 @isTest
 private class TestContactController {
-
-    private static final String ERROR_MESSAGE = 'first error: DELETE_FAILED, Your attempt to delete contact with Id {0} could not be completed because it is associated with some cases';
-
+    
     @testSetup 
     static void createAllData(){
 

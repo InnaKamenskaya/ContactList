@@ -1,6 +1,7 @@
 global class WeatherService {
 
     private static final String META_DATA_LABEL = 'openWeather';
+    private static final String ENDPOINT = 'callout:WeatherAPI?q={0}&units=metric&appid={1}';
 
     @AuraEnabled(cacheable=true)
     public static WeatherData getCurrentWeather(String location){ 
@@ -12,7 +13,8 @@ global class WeatherService {
             return null;
         }
         HttpRequest req = new HttpRequest();
-        req.setEndpoint('callout:WeatherAPI?q='+ location + '&units=metric' + '&appid=' + apiKey);
+        List<String> endpointValues = new List<String>{location, apiKey};
+        req.setEndpoint(String.format(ENDPOINT, endpointValues));
         req.setMethod('GET');
         Http http = new Http();
         HttpResponse resp = http.send(req);

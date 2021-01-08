@@ -2,15 +2,8 @@ global class WeatherAPICalloutMock implements HttpCalloutMock  {
 
     private static WeatherService.WeatherData weather;
 
-    public WeatherAPICalloutMock(String location) {
-        if (location == null || location == '') {
-            weather = null;
-        }else { 
-            weather = new WeatherService.WeatherData();
-            weather.temp = 25.5;
-            weather.windSpeed = 3.3;
-            weather.humidity = 75.0;
-        }
+    public WeatherAPICalloutMock(WeatherService.WeatherData incomeWeather) {
+        weather = incomeWeather;
     }
 
     global HTTPResponse respond(HTTPRequest request) {
