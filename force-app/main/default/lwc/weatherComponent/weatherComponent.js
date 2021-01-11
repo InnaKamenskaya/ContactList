@@ -2,7 +2,7 @@ import { api, wire, track, LightningElement } from 'lwc';
 import SHIPPING_CITY_FIELD from '@salesforce/schema/Account.ShippingCity'
 import WHEATHER_KEY_FIELD from '@salesforce/schema/Account.WeatherKey__c'
 import IS_BACK_IMPL_FIELD from '@salesforce/schema/Account.IsBackimplementation__c'
-import getCurrentWeather from '@salesforce/apex/WeatherService.getCurrentWeather';
+import getCurrentWeather from '@salesforce/apex/WeatherRepository.getCurrentWeather';
 import { getFieldValue, getRecord } from 'lightning/uiRecordApi';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { loadStyle } from 'lightning/platformResourceLoader';
@@ -12,6 +12,7 @@ const fields = [SHIPPING_CITY_FIELD, WHEATHER_KEY_FIELD, IS_BACK_IMPL_FIELD];
 
 export default class WeatherComponent extends LightningElement {
     @api recordId;
+    celsiusSign = '\u2103';
     @track weather = {
         temp: 0,
         wind: 0,
@@ -76,7 +77,7 @@ export default class WeatherComponent extends LightningElement {
     }   
 
     get currentTemp(){
-        return Math.round(this.weather.temp) +  '\u2103';
+        return Math.round(this.weather.temp) +  this.celsiusSign;
     }
 
     get currentWindSpeed(){

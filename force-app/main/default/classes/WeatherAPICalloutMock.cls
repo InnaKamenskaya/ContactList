@@ -1,20 +1,20 @@
 global class WeatherAPICalloutMock implements HttpCalloutMock  {
 
-    private static WeatherService.WeatherData weather;
+    private static WeatherRepository.WeatherData weather;
 
-    public WeatherAPICalloutMock(WeatherService.WeatherData incomeWeather) {
+    public WeatherAPICalloutMock(WeatherRepository.WeatherData incomeWeather) {
         weather = incomeWeather;
     }
 
-    global HTTPResponse respond(HTTPRequest request) {
+    global HttpResponse respond(HTTPRequest request) {
         HttpResponse response = new HttpResponse();
         response.setHeader('Content-Type', 'application/json');
         if (weather == null) {
             response.setStatusCode(400);
-        }else {
-            response.setBody(JSON.serialize(weather));
-            response.setStatusCode(200);
-        }        
+            return response;
+        }
+        response.setBody(JSON.serialize(weather));
+        response.setStatusCode(200);                
         return response; 
     }
 }

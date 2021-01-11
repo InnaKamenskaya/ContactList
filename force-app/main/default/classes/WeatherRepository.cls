@@ -1,15 +1,16 @@
-global class WeatherService {
+global class WeatherRepository {
 
+    public class NullResponseException extends Exception {}
     private static final String META_DATA_LABEL = 'openWeather';
     private static final String ENDPOINT = 'callout:WeatherAPI?q={0}&units=metric&appid={1}';
 
     @AuraEnabled(cacheable=true)
     public static WeatherData getCurrentWeather(String location){ 
-        if(location == null || location ==''){
+        if(String.isBlank(location)){
             return null;
         }
-        String apiKey = ([SELECT Key__c FROM WeatherAPIKey__mdt WHERE Label =: META_DATA_LABEL] == null) ? null : [SELECT Key__c FROM WeatherAPIKey__mdt WHERE Label =: META_DATA_LABEL].Key__c;
-        if (apiKey == null || apiKey == '') {
+        String apiKey = (ApiKey__c.getOrgDefaults() == null) ? null : ApiKey__c.getOrgDefaults().weatherKey__c;
+        if (String.isBlank(apiKey)) {
             return null;
         }
         HttpRequest req = new HttpRequest();
@@ -19,7 +20,7 @@ global class WeatherService {
         Http http = new Http();
         HttpResponse resp = http.send(req);
         if (resp == null) {
-            return null;
+            throw new NullResponseException(resp.getStatus());
         }
         Map<String, Object> weatherMap = (Map<String, Object>) JSON.deserializeUntyped(resp.getBody());
         Map<String, Object> main = (Map<String, Object>) weatherMap.get('main');
@@ -27,12 +28,11 @@ global class WeatherService {
 
         WeatherData weather = new WeatherData();
         if(Test.isRunningTest()){
-            weather = (WeatherData)JSON.deserialize(resp.getBody(), WeatherData.class);
-        }else {
-            weather.temp = (Decimal) main.get('temp');
-            weather.windSpeed = (Decimal) wind.get('speed');
-            weather.humidity = (Decimal) main.get('humidity');
-        }            
+            return (WeatherData)JSON.deserialize(resp.getBody(), WeatherData.class);
+        }
+        weather.temp = (Decimal) main.get('temp');
+        weather.windSpeed = (Decimal) wind.get('speed');
+        weather.humidity = (Decimal) main.get('humidity');                   
         return weather;            
     }
 
