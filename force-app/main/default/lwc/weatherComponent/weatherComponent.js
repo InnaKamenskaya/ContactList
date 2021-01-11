@@ -24,9 +24,9 @@ export default class WeatherComponent extends LightningElement {
             if(getFieldValue(result.data, IS_BACK_IMPL_FIELD)){
                 getCurrentWeather({location: getFieldValue(result.data, SHIPPING_CITY_FIELD)})
                 .then(value => {
-                    this.weather.temp = value.temp;
-                    this.weather.wind = value.windSpeed;
-                    this.weather.humidity = value.humidity;
+                    this.weather.temp = value['main'].temp;
+                    this.weather.wind = value['wind'].speed;
+                    this.weather.humidity = value['main'].humidity;
                 }).catch(error => {
                     this.dispatchEvent(
                         new ShowToastEvent({
@@ -50,7 +50,7 @@ export default class WeatherComponent extends LightningElement {
                     }
                 })
                 .then(jsonResponse => {
-                    this.weather.temp = (jsonResponse['main'].temp);
+                    this.weather.temp = jsonResponse['main'].temp;
                     this.weather.wind = jsonResponse['wind'].speed;
                     this.weather.humidity = jsonResponse['main'].humidity;
                     return this.weather;

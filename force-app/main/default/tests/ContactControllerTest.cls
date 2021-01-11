@@ -1,5 +1,5 @@
 @isTest
-private class TestContactController {
+private class ContactControllerTest {
     
     @testSetup 
     static void createAllData(){

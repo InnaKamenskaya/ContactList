@@ -5,7 +5,7 @@ global class WeatherRepository {
     private static final String ENDPOINT = 'callout:WeatherAPI?q={0}&units=metric&appid={1}';
 
     @AuraEnabled(cacheable=true)
-    public static WeatherData getCurrentWeather(String location){ 
+    public static WeatherResponse getCurrentWeather(String location){ 
         if(String.isBlank(location)){
             return null;
         }
@@ -21,27 +21,23 @@ global class WeatherRepository {
         HttpResponse resp = http.send(req);
         if (resp == null) {
             throw new NullResponseException(resp.getStatus());
-        }
-        Map<String, Object> weatherMap = (Map<String, Object>) JSON.deserializeUntyped(resp.getBody());
-        Map<String, Object> main = (Map<String, Object>) weatherMap.get('main');
-        Map<String, Object> wind = (Map<String, Object>) weatherMap.get('wind');
-
-        WeatherData weather = new WeatherData();
-        if(Test.isRunningTest()){
-            return (WeatherData)JSON.deserialize(resp.getBody(), WeatherData.class);
-        }
-        weather.temp = (Decimal) main.get('temp');
-        weather.windSpeed = (Decimal) wind.get('speed');
-        weather.humidity = (Decimal) main.get('humidity');                   
-        return weather;            
+        }                
+        return (WeatherResponse)JSON.deserialize(resp.getBody(), WeatherResponse.class);            
     }
 
+    global class WeatherResponse{
+        @AuraEnabled
+        public WeatherData main;
+        @AuraEnabled
+        public WeatherData wind; 
+    }  
+    
     global class WeatherData{
         @AuraEnabled
         public Decimal temp;
         @AuraEnabled 
-        public Decimal windSpeed;
+        public Decimal speed;
         @AuraEnabled 
         public Decimal humidity;
-    }    
+    }
 }
